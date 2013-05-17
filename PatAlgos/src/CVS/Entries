@@ -1,0 +1,14 @@
+/BaseIsolator.cc/1.3/Mon Mar 17 17:14:23 2008//TV08-11-06
+/EfficiencyLoader.cc/1.1/Tue Jun 24 22:58:25 2008//TV08-11-06
+/HemisphereAlgo.cc/1.5/Wed Sep 23 10:06:45 2009//TV08-11-06
+/IsoDepositIsolator.cc/1.7/Sun Oct 19 21:11:57 2008//TV08-11-06
+/KinResolutionsLoader.cc/1.2/Thu Jun 25 23:49:36 2009//TV08-11-06
+/KinematicResolutionRcd.cc/1.3/Sat Feb 20 21:00:30 2010//TV08-11-06
+/MultiIsolator.cc/1.9/Thu Oct 15 17:17:26 2009//TV08-11-06
+/OverlapTest.cc/1.3/Thu Apr  2 12:12:46 2009//TV08-11-06
+/PATPrimaryVertexSelector.cc/1.2/Thu Mar  6 09:23:11 2008//TV08-11-06
+/PATUserDataMerger.cc/1.1/Tue Sep 30 21:33:06 2008//TV08-11-06
+/SimpleIsolator.cc/1.3/Sun Oct 19 21:11:57 2008//TV08-11-06
+/StringResolutionProvider.cc/1.5/Wed May  5 14:15:33 2010//TV08-11-06
+/VertexingHelper.cc/1.1/Tue Jul 22 12:47:02 2008//TV08-11-06
+D
