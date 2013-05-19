@@ -20,6 +20,7 @@ class AddJetCollection(ConfigToolBase):
         ## add all parameters that should be known to the class
         self.addParameter(self._defaultParameters,'labelName',self._defaultValue, "Label name of the new patJet collection.", str)
         self.addParameter(self._defaultParameters,'jetSource',self._defaultValue, "Label of the input collection from which the new patJet collection should be created", cms.InputTag)
+        self.addParameter(self._defaultParameters,'algo',self._defaultValue, "Jet algorithm of the input collection from which the new patJet collection should be created")	
         self.addParameter(self._defaultParameters,'jetCorrections',None, "Add all relevant information about jet energy corrections that you want to be added to your new patJet \
         collection. The format has to be given in a python tuple of type: (\'AK5Calo\',[\'L2Relative\', \'L3Absolute\'], patMet). Here the first argument corresponds to the payload \
         in the CMS Conditions database for the given jet collection; the second argument corresponds to the jet energy correction levels that you want to be embedded into your \
@@ -55,7 +56,7 @@ class AddJetCollection(ConfigToolBase):
         """
         return self._defaultParameters
 
-    def __call__(self,process,labelName=None,jetSource=None,jetCorrections=None,btagDiscriminators=None,btagInfos=None,jetTrackAssociation=None,outputModules=None):
+    def __call__(self,process,labelName=None,jetSource=None,algo=None,jetCorrections=None,btagDiscriminators=None,btagInfos=None,jetTrackAssociation=None,outputModules=None):
         """
         Function call wrapper. This will check the parameters and call the actual implementation that
         can be found in toolCode via the base class function apply.
@@ -66,6 +67,9 @@ class AddJetCollection(ConfigToolBase):
         if jetSource is None:
             jetSource=self._defaultParameters['jetSource'].value
         self.setParameter('jetSource', jetSource)
+        if algo is None:
+            algo=self._defaultParameters['algo'].value
+        self.setParameter('algo', algo)	
         if jetCorrections is None:
             jetCorrections=self._defaultParameters['jetCorrections'].value
         self.setParameter('jetCorrections', jetCorrections)
@@ -90,6 +94,7 @@ class AddJetCollection(ConfigToolBase):
         ## initialize parameters
         labelName='patJets'+self._parameters['labelName'].value
         jetSource=self._parameters['jetSource'].value
+        algo=self._parameters['algo'].value	
         jetCorrections=self._parameters['jetCorrections'].value
         btagDiscriminators=list(self._parameters['btagDiscriminators'].value)
         btagInfos=list(self._parameters['btagInfos'].value)
@@ -113,8 +118,8 @@ class AddJetCollection(ConfigToolBase):
         ## are ak, kt, sc, ic. This loop expects that the algo type is
         ## followed by a single integer corresponding to the opening
         ## angle parameter dR times 10 (examples ak5, kt4, kt6, ...)
-        _algo='ak'
-	jetSource=cms.InputTag("ak5PFJets")
+        _algo=algo
+	#jetSource=cms.InputTag("ak5PFJets")
         for x in ["ak", "kt", "sc", "ic"]:
 	    print "hallo11"
 	    print jetSource
@@ -122,7 +127,7 @@ class AddJetCollection(ConfigToolBase):
             if jetSource.getModuleLabel().lower().find(x)>-1:
 		print "hier111"
                 _algo=jetSource.getModuleLabel()[jetSource.getModuleLabel().lower().find(x):jetSource.getModuleLabel().lower().find(x)+3]
-	print _algo
+	#print _algo
         ## add new patJets to process (keep instance for later further modifications)
         from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cfi import patJets
         if labelName in knownModules :
@@ -404,6 +409,7 @@ class SwitchJetCollection(ConfigToolBase):
         ConfigToolBase.__init__(self)
         ## add all parameters that should be known to the class
         self.addParameter(self._defaultParameters,'jetSource',self._defaultValue, "Label of the input collection from which the new patJet collection should be created", cms.InputTag)
+        self.addParameter(self._defaultParameters,'algo',self._defaultValue, "Jet algorithm of the input collection from which the new patJet collection should be created")	
         self.addParameter(self._defaultParameters,'jetCorrections',None, "Add all relevant information about jet energy corrections that you want to be added to your new patJet \
         collection. The format is to be passed on in a python tuple: e.g. (\'AK5Calo\',[\'L2Relative\', \'L3Absolute\'], patMet). The first argument corresponds to the payload \
         in the CMS Conditions database for the given jet collection; the second argument corresponds to the jet energy correction level that you want to be embedded into your \
@@ -436,7 +442,7 @@ class SwitchJetCollection(ConfigToolBase):
         """
         return self._defaultParameters
 
-    def __call__(self,process,jetSource=None,jetCorrections=None,btagDiscriminators=None,btagInfos=None,jetTrackAssociation=None,outputModules=None):
+    def __call__(self,process,jetSource=None,algo=None,jetCorrections=None,btagDiscriminators=None,btagInfos=None,jetTrackAssociation=None,outputModules=None):
         """
         Function call wrapper. This will check the parameters and call the actual implementation that
         can be found in toolCode via the base class function apply.
@@ -444,6 +450,9 @@ class SwitchJetCollection(ConfigToolBase):
         if jetSource is None:
             jetSource=self._defaultParameters['jetSource'].value
         self.setParameter('jetSource', jetSource)
+        if algo is None:
+            algo=self._defaultParameters['algo'].value
+        self.setParameter('algo', algo)	
         if jetCorrections is None:
             jetCorrections=self._defaultParameters['jetCorrections'].value
         self.setParameter('jetCorrections', jetCorrections)
@@ -467,6 +476,7 @@ class SwitchJetCollection(ConfigToolBase):
         """
         ## initialize parameters
         jetSource=self._parameters['jetSource'].value
+        algo=self._parameters['algo'].value	
         jetCorrections=self._parameters['jetCorrections'].value
         btagDiscriminators=self._parameters['btagDiscriminators'].value
         btagInfos=self._parameters['btagInfos'].value
@@ -478,6 +488,7 @@ class SwitchJetCollection(ConfigToolBase):
             process,
             labelName='',
             jetSource=jetSource,
+	    algo=algo,
             jetCorrections=jetCorrections,
             btagDiscriminators=btagDiscriminators,
             btagInfos=btagInfos,

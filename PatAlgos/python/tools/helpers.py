@@ -1,7 +1,100 @@
 import FWCore.ParameterSet.Config as cms
-
+from FWCore.ParameterSet.Mixins import PrintOptions,_ParameterTypeBase,_SimpleParameterTypeBase, _Parameterizable, _ConfigureComponent, _TypedParameterizable, _Labelable,  _Unlabelable,  _ValidatingListBase
+from FWCore.ParameterSet.SequenceTypes import _ModuleSequenceType, _Sequenceable
+from FWCore.ParameterSet.SequenceTypes import *
+import sys
 ## Helpers to perform some technically boring tasks like looking for all modules with a given parameter
 ## and replacing that to a given value
+def loadWithPostFix(process,moduleName,postfix):
+	moduleName = moduleName.replace("/",".")
+        module = __import__(moduleName)
+	#print module.PatAlgos.patSequences_cff.patDefaultSequence
+        extendWithPostFix(process,sys.modules[moduleName],postfix)
+
+def extendWithPostFix(process,other,postfix,items=()):
+        """Look in other and find types which we can use"""
+        # enable explicit check to avoid overwriting of existing objects
+        #__dict__['_Process__InExtendCall'] = True
+
+        seqs = dict()
+	sequence = cms.Sequence()
+	sequence._moduleLabels = []
+	sequence.setLabel('tempSequence')
+	print sequence.label()
+        for name in dir(other):
+		
+            #'from XX import *' ignores these, and so should we.
+            	if name.startswith('_'):
+                	continue
+            	item = getattr(other,name)
+            	if name == "source" or name == "looper" or name == "subProcess":
+			continue
+			#self.__setattr__(name,item)
+                	#print "hier"
+            	elif isinstance(item,_ModuleSequenceType):
+			#print "isSequence"
+			if name == "produceHPSPFTaus":
+				print "needed sequence"
+				seqs[name+postfix]=item
+			else:
+				continue
+                	#seqs[name]=item
+            	elif isinstance(item,_Labelable):
+               	 	#self.__setattr__(name,item)
+			#print "hier"
+			
+                	if not item.hasLabel_():
+				#print "setze label"
+                   		item.setLabel(name)
+			if postfix != '':
+				#print "postfixing"
+				newModule = item.clone()
+				if 'ESProducer' in name:
+					newLabel = item.label()
+					newName =name
+				else:
+					newLabel = item.label()+postfix
+					newName = name+postfix
+				#print newName
+				process.__setattr__(newName,newModule)
+				if isinstance(newModule, _Sequenceable):
+					sequence +=getattr(process,newName)
+					sequence._moduleLabels.append(item.label())
+			else:
+				process.__setattr__(name,item)
+				if isinstance(item, _Sequenceable):
+					sequence +=getattr(process,name)
+				
+            	elif isinstance(item,Schedule):
+			#print "isSchedule"
+			continue
+                	#self.__setattr__(name,item)
+            	#elif isinstance(item,_Unlabelable):
+                	#print "Unlableable"
+			#self.add_(item)
+	#print sequence
+	#removePostfix=False
+	#massSearchReplaceAnyInputTag(sequence, '',postfix, moduleLabelOnly=True, verbose=False)
+	#sequence.setLabel('tempSequence')
+        #visitor = MassSearchReplaceAnyInputTagVisitor(process, sequence.label(), postfix, removePostfix)
+        #sequence.visit(visitor)
+	for label in sequence._moduleLabels:
+		massSearchReplaceAnyInputTag(sequence, label, label+postfix,verbose=False,moduleLabelOnly=True)	
+        #now create a sequence which uses the newly made items
+        for name in seqs.iterkeys():
+            seq = seqs[name]
+            #newSeq = seq.copy()
+            
+            if id(seq) not in process._cloneToObjectDict:
+                process.__setattr__(name,seq)
+            else:
+                newSeq = process._cloneToObjectDict[id(seq)]
+                process.__dict__[name]=newSeq
+                process.__setObjectLabel(newSeq, name)
+                #now put in proper bucket
+                newSeq._place(name,process)
+        process.__dict__['_Process__InExtendCall'] = False
+
 
 def modulesInPath( process, pathLabel ):
 	return [ m.label() for m in listModules( getattr( process, pathLabel ) ) ]
