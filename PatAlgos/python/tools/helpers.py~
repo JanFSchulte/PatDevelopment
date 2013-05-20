@@ -34,6 +34,7 @@ def extendWithPostFix(process,other,postfix,items=()):
             	elif isinstance(item,_ModuleSequenceType):
 			#print "isSequence"
 			if name == "produceHPSPFTaus":
+				print "needed sequence"
 				seqs[name+postfix]=item
 			else:
 				continue

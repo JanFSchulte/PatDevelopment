@@ -10,18 +10,16 @@ runOnMC = True
     #from PhysicsTools.PatAlgos.patInputFiles_cff import filesSingleMuRECO
     #process.source.fileNames = filesSingleMuRECO
     #process.GlobalTag.globaltag = cms.string("FT_P_V42::All" )
+from PhysicsTools.PatAlgos.tools.helpers import loadWithPostFix
 
-# load the PAT config
-#process.load("PhysicsTools.PatAlgos.patSequences_cff")
+loadWithPostFix(process,'PhysicsTools.PatAlgos.patSequences_cff','')
 
-from PhysicsTools.PatAlgos.patSequences_cff import *
-
+#print process.patDefaultSequence
 # Configure PAT to use PF2PAT instead of AOD sources
 # this function will modify the PAT sequences.
 from PhysicsTools.PatAlgos.tools.pfTools import *
 
 
-process.p = cms.Path()
 
 
 # An empty postfix means that only PF2PAT is run,
@@ -29,9 +27,7 @@ process.p = cms.Path()
 # collections have standard names + postfix (e.g. patElectronPFlow)
 postfix = "PFlow"
 jetAlgo = "AK5"
-print "here"
 usePF2PAT(process,runPF2PAT=True, jetAlgo=jetAlgo, runOnMC=runOnMC, postfix=postfix)
-print "here too"
 # to run second PF2PAT+PAT with different postfix uncomment the following lines
 # and add the corresponding sequence to path
 #postfix2 = "PFlow2"
@@ -73,6 +69,12 @@ process.out.outputCommands = cms.untracked.vstring('drop *',
 					           'keep *_selectedPatTaus'+postfix+'*_*_*',
 					           'keep *_selectedPatJets'+postfix+'*_*_*',
 						   'keep *_patMETs'+postfix+'*_*_*', 
+						   'keep *_selectedPatPhotons'+'*_*_*',
+						   'keep *_selectedPatElectrons'+'*_*_*',
+					           'keep *_selectedPatMuons'+'*_*_*',
+					           'keep *_selectedPatTaus'+'*_*_*',
+					           'keep *_selectedPatJets'+'*_*_*',
+						   'keep *_patMETs'+'*_*_*', 						   
  )
 
 
@@ -86,7 +88,7 @@ getattr(process,"pfNoJet"+postfix).enable = True
 # verbose flags for the PF2PAT modules
 getattr(process,"pfNoMuon"+postfix).verbose = False
 process.options.allowUnscheduled = cms.untracked.bool(True)
-process.Tracer = cms.Service("Tracer")
+#process.Tracer = cms.Service("Tracer")
 ## ------------------------------------------------------
 #  In addition you usually want to change the following
 #  parameters:
@@ -97,7 +99,7 @@ process.Tracer = cms.Service("Tracer")
 #   process.source.fileNames =  ...       ##  (e.g. 'file:AOD.root')
 #
 process.source.fileNames = cms.untracked.vstring('file:/user/jschulte/52X/RelValTTbar_5_3_6_START53_V14_AOD.root')                                         ##
-process.maxEvents.input = 1
+process.maxEvents.input = 100
 #                                         ##
 #   process.out.outputCommands = [ ... ]  ##  (e.g. taken from PhysicsTools/PatAlgos/python/patEventContent_cff.py)
 #                                         ##
@@ -105,3 +107,4 @@ process.out.fileName = 'patTuple_PATandPF2PAT.root'
 #                                         ##
 #   process.options.wantSummary = False   ##  (to suppress the long output at the end of the job)
 
+#process.prune(verbose=True)

@@ -20,7 +20,6 @@ def extendWithPostFix(process,other,postfix,items=()):
 	sequence = cms.Sequence()
 	sequence._moduleLabels = []
 	sequence.setLabel('tempSequence')
-	print sequence.label()
         for name in dir(other):
 		
             #'from XX import *' ignores these, and so should we.
@@ -33,8 +32,8 @@ def extendWithPostFix(process,other,postfix,items=()):
                 	#print "hier"
             	elif isinstance(item,_ModuleSequenceType):
 			#print "isSequence"
+			### This sequence is used to keep track of modules for taus, keep it, at least for the moment
 			if name == "produceHPSPFTaus":
-				print "needed sequence"
 				seqs[name+postfix]=item
 			else:
 				continue
