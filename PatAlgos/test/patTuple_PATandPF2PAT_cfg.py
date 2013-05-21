@@ -1,7 +1,7 @@
 ## import skeleton process
 from PhysicsTools.PatAlgos.patTemplate_cfg import *
 
-runOnMC = True
+runOnMC = False
 
 #if runOnMC:
     #from PhysicsTools.PatAlgos.patInputFiles_cff import filesRelValProdTTbarAODSIM
@@ -26,8 +26,14 @@ from PhysicsTools.PatAlgos.tools.pfTools import *
 # otherwise both standard PAT and PF2PAT are run. In the latter case PF2PAT
 # collections have standard names + postfix (e.g. patElectronPFlow)
 postfix = "PFlow"
+postfix2 = 'PFlow2'
 jetAlgo = "AK5"
-usePF2PAT(process,runPF2PAT=True, jetAlgo=jetAlgo, runOnMC=runOnMC, postfix=postfix)
+jetAlgo2 = "AK7"
+#Define Objects to be excluded from Top Projection. Default is Tau, so objects are not cleaned for taus
+excludeFromTopProjection=['Tau']
+usePF2PAT(process,runPF2PAT=True, jetAlgo=jetAlgo, runOnMC=runOnMC, postfix=postfix,typeIMetCorrections=False,excludeFromTopProjection=excludeFromTopProjection)
+usePF2PAT(process,runPF2PAT=True, jetAlgo=jetAlgo2, runOnMC=runOnMC, postfix=postfix2,typeIMetCorrections=False,excludeFromTopProjection=excludeFromTopProjection)
+
 # to run second PF2PAT+PAT with different postfix uncomment the following lines
 # and add the corresponding sequence to path
 #postfix2 = "PFlow2"
@@ -68,22 +74,24 @@ process.out.outputCommands = cms.untracked.vstring('drop *',
 					           'keep *_selectedPatMuons'+postfix+'*_*_*',
 					           'keep *_selectedPatTaus'+postfix+'*_*_*',
 					           'keep *_selectedPatJets'+postfix+'*_*_*',
-						   'keep *_patMETs'+postfix+'*_*_*', 
+						   'keep *_patMETs'+postfix+'*_*_*',
+						   'keep *_selectedPatPhotons'+postfix2+'*_*_*',
+						   'keep *_selectedPatElectrons'+postfix2+'*_*_*',
+					           'keep *_selectedPatMuons'+postfix2+'*_*_*',
+					           'keep *_selectedPatTaus'+postfix2+'*_*_*',
+					           'keep *_selectedPatJets'+postfix2+'*_*_*',
+						   'keep *_patMETs'+postfix2+'*_*_*', 				
 						   'keep *_selectedPatPhotons'+'*_*_*',
 						   'keep *_selectedPatElectrons'+'*_*_*',
 					           'keep *_selectedPatMuons'+'*_*_*',
 					           'keep *_selectedPatTaus'+'*_*_*',
 					           'keep *_selectedPatJets'+'*_*_*',
-						   'keep *_patMETs'+'*_*_*', 						   
+						   'keep *_patMETs'+'*_*_*',		   						   
  )
 
 
-# top projections in PF2PAT:
-getattr(process,"pfNoPileUp"+postfix).enable = True
-getattr(process,"pfNoMuon"+postfix).enable = True
-getattr(process,"pfNoElectron"+postfix).enable = True
-getattr(process,"pfNoTau"+postfix).enable = False
-getattr(process,"pfNoJet"+postfix).enable = True
+
+
 
 # verbose flags for the PF2PAT modules
 getattr(process,"pfNoMuon"+postfix).verbose = False

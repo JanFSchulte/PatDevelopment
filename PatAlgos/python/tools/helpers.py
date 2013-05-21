@@ -33,27 +33,35 @@ def extendWithPostFix(process,other,postfix,items=()):
             	elif isinstance(item,_ModuleSequenceType):
 			#print "isSequence"
 			### This sequence is used to keep track of modules for taus, keep it, at least for the moment
-			if name == "produceHPSPFTaus":
-				seqs[name+postfix]=item
-			else:
-				continue
+			#if name == "produceHPSPFTaus":
+				#seqs[name+postfix]=item
+			#else:
+			continue
                 	#seqs[name]=item
             	elif isinstance(item,_Labelable):
                	 	#self.__setattr__(name,item)
 			#print "hier"
-			
+			#print name
                 	if not item.hasLabel_():
 				#print "setze label"
                    		item.setLabel(name)
 			if postfix != '':
 				#print "postfixing"
 				newModule = item.clone()
-				if 'ESProducer' in name:
-					newLabel = item.label()
-					newName =name
+				#print item.label()
+				#if not 'Parameter' in item.label() and not '_params' in item.label() and not 'PFTauQualityCuts' in item.label():
+				if not type(item) is cms.PSet:
+					if 'ESProducer' in name or 'ESProducer' in item.type_():
+						
+						newLabel = item.label()
+						newName =name
+						#print name
+					else:
+						newLabel = item.label()+postfix
+						newName = name+postfix
 				else:
 					newLabel = item.label()+postfix
-					newName = name+postfix
+					newName = name+postfix							
 				#print newName
 				process.__setattr__(newName,newModule)
 				if isinstance(newModule, _Sequenceable):
@@ -77,22 +85,24 @@ def extendWithPostFix(process,other,postfix,items=()):
 	#sequence.setLabel('tempSequence')
         #visitor = MassSearchReplaceAnyInputTagVisitor(process, sequence.label(), postfix, removePostfix)
         #sequence.visit(visitor)
-	for label in sequence._moduleLabels:
-		massSearchReplaceAnyInputTag(sequence, label, label+postfix,verbose=False,moduleLabelOnly=True)	
+	if postfix != '':
+		for label in sequence._moduleLabels:
+			massSearchReplaceAnyInputTag(sequence, label, label+postfix,verbose=False,moduleLabelOnly=True)	
         #now create a sequence which uses the newly made items
-        for name in seqs.iterkeys():
-            seq = seqs[name]
+        #for name in seqs.iterkeys():
+	    #print name	
+            #seq = seqs[name]
             #newSeq = seq.copy()
             
-            if id(seq) not in process._cloneToObjectDict:
-                process.__setattr__(name,seq)
-            else:
-                newSeq = process._cloneToObjectDict[id(seq)]
-                process.__dict__[name]=newSeq
-                process.__setObjectLabel(newSeq, name)
+            #if id(seq) not in process._cloneToObjectDict:
+                #process.__setattr__(name,seq)
+            #else:
+                #newSeq = process._cloneToObjectDict[id(seq)]
+                #process.__dict__[name]=newSeq
+                #process.__setObjectLabel(newSeq, name)
                 #now put in proper bucket
-                newSeq._place(name,process)
-        process.__dict__['_Process__InExtendCall'] = False
+                #newSeq._place(name,process)
+        #process.__dict__['_Process__InExtendCall'] = False
 
 
 def modulesInPath( process, pathLabel ):

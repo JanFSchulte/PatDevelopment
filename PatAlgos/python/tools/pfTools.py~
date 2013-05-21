@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-#from PhysicsTools.PatAlgos.tools.coreTools import *
+from PhysicsTools.PatAlgos.tools.coreTools import *
 from PhysicsTools.PatAlgos.tools.jetTools import *
 from PhysicsTools.PatAlgos.tools.tauTools import *
 
@@ -230,7 +230,7 @@ def reconfigurePF2PATTaus(process,
    #newTau.jetRegionSrc = oldTau.jetRegionSrc
    #newTau.jetSrc = oldTau.jetSrc
    #newTau.builders[0].pfCandSrc = cms.InputTag("pfNoElectronJMEPFlow")
-   newTau.jetRegionSrc = cms.InputTag("pfTauPFJets08RegionPFlow")
+   #newTau.jetRegionSrc = cms.InputTag("pfTauPFJets08RegionPFlow")
    #newTau.jetSrc = cms.InputTag("pfJetsPFlow")
    # replace old tau producer by new one put it into baseSequence
    setattr(process,"pfTausBase"+postfix,newTau)
@@ -449,6 +449,7 @@ def switchToPFJets(process, input=cms.InputTag('pfNoTauClones'), algo='AK5', pos
                         jetTrackAssociation=True,
                         jetCorrections=inputJetCorrLabel,
                         outputModules = outputModules,
+			#btagDiscriminators = ['combinedSecondaryVertexBJetTags',]
                         )
 		
     # check whether L1FastJet is in the list of correction levels or not
@@ -522,10 +523,13 @@ def adaptPVs(process, pvCollection=cms.InputTag('offlinePrimaryVertices'), postf
                     setattr(getattr(process,m),namePvSrc,deepcopy(pvCollection))
 
 
-def usePF2PAT(process,runPF2PAT=True, jetAlgo='ak5', runOnMC=True, postfix="", jetCorrections=('AK5PFchs', ['L1FastJet','L2Relative','L3Absolute'],'Type-1'), pvCollection=cms.InputTag('offlinePrimaryVertices'), typeIMetCorrections=True, outputModules=['out']):
+def usePF2PAT(process,runPF2PAT=True, jetAlgo='ak5', runOnMC=True, postfix="", jetCorrections=('AK5PFchs', ['L1FastJet','L2Relative','L3Absolute'],'None'), pvCollection=cms.InputTag('offlinePrimaryVertices',), typeIMetCorrections=False, outputModules=['out'],excludeFromTopProjection=['Tau']):
     # PLEASE DO NOT CLOBBER THIS FUNCTION WITH CODE SPECIFIC TO A GIVEN PHYSICS OBJECT.
     # CREATE ADDITIONAL FUNCTIONS IF NEEDED.
-
+    #if jetCorrections[2] == 'Type-1':
+	    #typeIMetCorrections=True
+    if typeIMetCorrections:
+    	jetCorrections = (jetCorrections[0],jetCorrections[1],'Type-1')
     """Switch PAT to use PF2PAT instead of AOD sources. if 'runPF2PAT' is true, we'll also add PF2PAT in front of the PAT sequence"""
 
     # -------- CORE ---------------
@@ -542,13 +546,8 @@ def usePF2PAT(process,runPF2PAT=True, jetAlgo='ak5', runOnMC=True, postfix="", j
     else:
 	loadWithPostFix(process,'PhysicsTools.PatAlgos.patSequences_cff',postfix)
 	
-	
-    #if not postfix == "":
-	#loadWithPostFix(process,'PhysicsTools.PatAlgos.patSequences_cff','')
 
 	
-	
-    removeCleaning(process, postfix=postfix, outputModules=outputModules)
 
     # -------- OBJECTS ------------
     # Muons
@@ -581,6 +580,7 @@ def usePF2PAT(process,runPF2PAT=True, jetAlgo='ak5', runOnMC=True, postfix="", j
             #)
     else :
         if not 'L2L3Residual' in jetCorrections[1]:
+		### think of a more accurate warning
             print '#################################################'
             print 'WARNING! Not using L2L3Residual but this is data.'
             print 'If this is okay with you, disregard this message.'
@@ -609,339 +609,18 @@ def usePF2PAT(process,runPF2PAT=True, jetAlgo='ak5', runOnMC=True, postfix="", j
             #process.genForPF2PATSequence+applyPostfix(process,"patCandidates",postfix)
             #)
     else:
-        removeMCMatchingPF2PAT(process,postfix=postfix,outputModules=outputModules)
+        RunOnData(process,postfix=postfix,outputModules=outputModules)
 
-    print "Done: PF2PAT interfaced to PAT, postfix=", postfix
-
-
-class RemoveCleaning(ConfigToolBase):
-
-    """ remove PAT cleaning from the default sequence:
-    """
-    _label='removeCleaning'
-    _defaultParameters=dicttypes.SortedKeysDict()
-    def __init__(self):
-        ConfigToolBase.__init__(self)
-        self.addParameter(self._defaultParameters,'outputModules',['out'], "names of all output modules specified to be adapted (default is ['out'])")
-        self.addParameter(self._defaultParameters,'postfix',"", "postfix of default sequence")
-        self._parameters=copy.deepcopy(self._defaultParameters)
-        self._comment = ""
-
-    def getDefaultParameters(self):
-        return self._defaultParameters
-
-    def __call__(self,process,
-                 outputInProcess = None,
-                 postfix         = None,
-                 outputModules   = None) :
-        ## stop processing if 'outputInProcess' exists and show the new alternative
-        if  not outputInProcess is None:
-            depricatedOptionOutputInProcess(self)
-        if  outputModules is None:
-            outputModules=self._defaultParameters['outputModules'].value
-        if postfix  is None:
-            postfix=self._defaultParameters['postfix'].value
-
-        self.setParameter('outputModules',outputModules)
-        self.setParameter('postfix',postfix)
-
-        self.apply(process)
-
-    def toolCode(self, process):
-        outputModules=self._parameters['outputModules'].value
-        postfix=self._parameters['postfix'].value
-	counterList = ['countPatElectrons'+postfix,'countPatMuons'+postfix,'countPatTaus'+postfix,'countPatLeptons'+postfix,'countPatPhotons'+postfix,'countPatJets'+postfix]
-
-        ## adapt single object counters
-        for m in process.producerNames().split(' '):
-	    if m in counterList:
-		    print m
-		    if hasattr(getattr(process,m), 'src'): m.src = m.src.value().replace('cleanPat','selectedPat')
-
-        ## adapt lepton counter
-        countLept = applyPostfix(process,"countPatLeptons",postfix)
-        countLept.electronSource = countLept.electronSource.value().replace('cleanPat','selectedPat')
-        countLept.muonSource = countLept.muonSource.value().replace('cleanPat','selectedPat')
-        countLept.tauSource = countLept.tauSource.value().replace('cleanPat','selectedPat')
-        #for m in getattr(process, "cleanPatCandidates").moduleNames():
-            #getattr(process, "patDefaultSequence"+postfix).remove(
-                #applyPostfix(process,m,postfix)
-                #)
-        if len(outputModules) > 0:
-            print "------------------------------------------------------------"
-            print "INFO   : cleaning has been removed. Switching output from"
-            print "         clean PAT candidates to selected PAT candidates."
-            ## add selected pat objects to the pat output
-            from PhysicsTools.PatAlgos.patEventContent_cff import patEventContentNoCleaning
-            for outMod in outputModules:
-                if hasattr(process,outMod):
-                    getattr(process,outMod).outputCommands = patEventContentNoCleaning
-                else:
-                    raise KeyError, "process has no OutModule named", outMod
-
-removeCleaning=RemoveCleaning()
-
-
-
-class RemoveSpecificPATObjects(ConfigToolBase):
-
-    """ Remove a specific PAT object from the default sequence
-    """
-    _label='removeSpecificPATObjects'
-    _defaultParameters=dicttypes.SortedKeysDict()
-    def __init__(self):
-        ConfigToolBase.__init__(self)
-        self.addParameter(self._defaultParameters,'names',self._defaultValue, "list of collection names; supported are 'Photons', 'Electrons', 'Muons', 'Taus', 'Jets', 'METs'", Type=list, allowedValues=['Photons', 'Electrons', 'Muons', 'Taus', 'Jets', 'METs'])
-        self.addParameter(self._defaultParameters,'outputModules',['out'], "names of all output modules specified to be adapted (default is ['out'])")
-        self.addParameter(self._defaultParameters,'postfix',"", "postfix of default sequence")
-        self._parameters=copy.deepcopy(self._defaultParameters)
-        self._comment = ""
-
-    def getDefaultParameters(self):
-        return self._defaultParameters
-
-    def __call__(self,process,
-                 names           = None,
-                 outputInProcess = None,
-                 postfix         = None,
-                 outputModules   = None) :
-        ## stop processing if 'outputInProcess' exists and show the new alternative
-        if  not outputInProcess is None:
-            depricatedOptionOutputInProcess(self)
-        if  names is None:
-            names=self._defaultParameters['names'].value
-        if  outputModules is None:
-            outputModules=self._defaultParameters['outputModules'].value
-        if postfix  is None:
-            postfix=self._defaultParameters['postfix'].value
-        self.setParameter('names',names)
-        self.setParameter('outputModules',outputModules)
-        self.setParameter('postfix',postfix)
-        self.apply(process)
-
-    def toolCode(self, process):
-        names=self._parameters['names'].value
-        outputModules=self._parameters['outputModules'].value
-        postfix=self._parameters['postfix'].value
-
-        ## remove pre object production steps from the default sequence
-        for obj in range(len(names)):
-            if( names[obj] == 'Photons' ):
-                removeIfInSequence(process, 'patPhotonIsolation', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'photonMatch', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patPhotons', "patPF2PATSequence", postfix)
-            if( names[obj] == 'Electrons' ):
-                removeIfInSequence(process, 'patElectronId', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patElectronIsolation', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'electronMatch', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patElectrons', "patPF2PATSequence", postfix)
-            if( names[obj] == 'Muons' ):
-                removeIfInSequence(process, 'muonMatch', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patMuons', "patPF2PATSequence", postfix)
-            if( names[obj] == 'Taus' ):
-                removeIfInSequence(process, 'patPFCandidateIsoDepositSelection', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patPFTauIsolation', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'tauMatch', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'tauGenJets', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'tauGenJetsSelectorAllHadrons', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'tauGenJetMatch', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patTaus', "patPF2PATSequence", postfix)
-            if( names[obj] == 'Jets' ):
-                removeIfInSequence(process, 'patJetCharge', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patJetCorrections', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patJetPartonMatch', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patJetGenJetMatch', "patPF2PATSequence", postfix)
-                removeIfInSequence(process, 'patJetFlavourId', "patPF2PATSequence", postfix)
-            if( names[obj] == 'METs' ):
-                removeIfInSequence(process, 'patMETCorrections', "patPF2PATSequence", postfix)
-
-            ## remove object production steps from the default sequence
-            if( names[obj] == 'METs' ):
-                process.patDefaultSequence.remove( getattr(process, 'pat'+names[obj]) )
-            else:
-                if( names[obj] == 'Jets' ):
-                    applyPostfix(process,"patPF2PATSequence",postfix).remove(
-                        getattr(process, jetCollectionString()+postfix) )
-                    applyPostfix(process,"patPF2PATSequence",postfix).remove(
-                        getattr(process, jetCollectionString('selected')+postfix) )
-                    applyPostfix(process,"patPF2PATSequence",postfix).remove(
-                        getattr(process, jetCollectionString('count')+postfix) )
-                else:
-                    applyPostfix(process,"patPF2PATSequence",postfix).remove(
-                        getattr(process, 'pat'+names[obj]+postfix) )
-                    applyPostfix(process,"patPF2PATSequence",postfix).remove(
-                        getattr(process, 'selectedPat'+names[obj]+postfix) )
-                    applyPostfix(process,"patPF2PATSequence",postfix).remove(
-                        getattr(process, 'countPat'+names[obj]+postfix) )
-            ## in the case of leptons, the lepton counter must be modified as well
-            if( names[obj] == 'Electrons' ):
-                print 'removed from lepton counter: electrons'
-                applyPostfix(process,"countPatLeptons",postfix).countElectrons = False
-            elif( names[obj] == 'Muons' ):
-                print 'removed from lepton counter: muons'
-                applyPostfix(process,"countPatLeptons",postfix).countMuons = False
-            elif( names[obj] == 'Taus' ):
-                print 'removed from lepton counter: taus'
-                applyPostfix(process,"countPatLeptons",postfix).countTaus = False
-            ## remove from summary
-            if( names[obj] == 'METs' ):
-                applyPostfix(process,"patCandidateSummary",postfix).candidates.remove(
-                    cms.InputTag('pat'+names[obj]+postfix) )
-            else:
-                if( names[obj] == 'Jets' ):
-                    applyPostfix(process,"patCandidateSummary",postfix).candidates.remove(
-                        cms.InputTag(jetCollectionString()+postfix) )
-                    applyPostfix(process,"selectedPatCandidateSummary",postfix).candidates.remove(
-                        cms.InputTag(jetCollectionString('selected')+postfix) )
-                    applyPostfix(process,"cleanPatCandidateSummary",postfix).candidates.remove(
-                        cms.InputTag(jetCollectionString('clean')+postfix) )
-                else:
-                    ## check whether module is in sequence or not
-                    result = [ m.label()[:-len(postfix)] for m in listModules( getattr(process,"patPF2PATSequence"+postfix))]
-                    result.extend([ m.label()[:-len(postfix)] for m in listSequences( getattr(process,"patPF2PATSequence"+postfix))]  )
-                    if applyPostfix(process,"patCandidateSummary",postfix) in result :
-                        applyPostfix(process,"patCandidateSummary",postfix).candidates.remove(
-                            cms.InputTag('pat'+names[obj]+postfix) )
-                    if applyPostfix(process,"selectedPatCandidateSummary",postfix) in result :
-                        applyPostfix(process,"selectedPatCandidateSummary",postfix).candidates.remove(
-                            cms.InputTag('selectedPat'+names[obj]+postfix) )
-                    if applyPostfix(process,"cleanPatCandidateSummary",postfix) in result :
-                        applyPostfix(process,"cleanPatCandidateSummary",postfix).candidates.remove(
-                            cms.InputTag('cleanPat'+names[obj]+postfix) )
-        ## remove cleaning for the moment; in principle only the removed object
-        ## could be taken out of the checkOverlaps PSet
-        if len(outputModules) > 0:
-            print "---------------------------------------------------------------------"
-            print "INFO   : some objects have been removed from the sequence. Switching "
-            print "         off PAT cross collection cleaning, as it might be of limited"
-            print "         sense now. If you still want to keep object collection cross"
-            print "         cleaning within PAT you need to run and configure it by hand"
-            #removeCleaning(process,outputModules=outputModules,postfix=postfix)
-
-removeSpecificPATObjects=RemoveSpecificPATObjects()
-
-
-class RemoveMCMatching(ConfigToolBase):
-
-    """ Remove monte carlo matching from a given collection or all PAT
-    candidate collections:
-    """
-    _label='removeMCMatching'
-    _defaultParameters=dicttypes.SortedKeysDict()
-    def __init__(self):
-        ConfigToolBase.__init__(self)
-        self.addParameter(self._defaultParameters,'names',['All'], "collection name; supported are 'Photons', 'Electrons','Muons', 'Taus', 'Jets', 'METs', 'All', 'PFAll', 'PFElectrons','PFTaus','PFMuons'", allowedValues=['Photons', 'Electrons','Muons', 'Taus', 'Jets', 'METs', 'All', 'PFAll', 'PFElectrons','PFTaus','PFMuons'])
-        self.addParameter(self._defaultParameters,'postfix',"", "postfix of default sequence")
-        self.addParameter(self._defaultParameters,'outputInProcess',True, "indicates whether the output of the pat tuple should be made persistent or not (legacy)")
-        self.addParameter(self._defaultParameters,'outputModules',['out'], "names of all output modules specified to be adapted (default is ['out'])")
-        self._parameters=copy.deepcopy(self._defaultParameters)
-        self._comment = ""
-
-    def getDefaultParameters(self):
-        return self._defaultParameters
-
-    def __call__(self,process,
-                 names           = None,
-                 postfix         = None,
-                 outputInProcess = None,
-                 outputModules   = None) :
-        ## stop processing if 'outputInProcess' exists and show the new alternative
-        if  not outputInProcess is None:
-            depricatedOptionOutputInProcess(self)
-        else:
-            outputInProcess=self._parameters['outputInProcess'].value
-        if  names is None:
-            names=self._defaultParameters['names'].value
-        if postfix  is None:
-            postfix=self._defaultParameters['postfix'].value
-        if  outputModules is None:
-            outputModules=self._defaultParameters['outputModules'].value
-        self.setParameter('names',names)
-        self.setParameter('postfix',postfix)
-        self.setParameter('outputInProcess', outputInProcess)
-        self.setParameter('outputModules',outputModules)
-        self.apply(process)
-
-    def toolCode(self, process):
-        names=self._parameters['names'].value
-        postfix=self._parameters['postfix'].value
-        outputInProcess=self._parameters['outputInProcess'].value
-        outputModules=self._parameters['outputModules'].value
-
-        if not outputInProcess:
-            outputModules=['']
-        
-        print "************** MC dependence removal ************"
-        for obj in range(len(names)):
-            if( names[obj] == 'Photons'   or names[obj] == 'All' ):
-                print "removing MC dependencies for photons"
-                _removeMCMatchingForPATObject(process, 'photonMatch', 'patPhotons', postfix)
-            if( names[obj] == 'Electrons' or names[obj] == 'All' ):
-                print "removing MC dependencies for electrons"
-                _removeMCMatchingForPATObject(process, 'electronMatch', 'patElectrons', postfix)
-            if( names[obj] == 'Muons'     or names[obj] == 'All' ):
-                print "removing MC dependencies for muons"
-                _removeMCMatchingForPATObject(process, 'muonMatch', 'patMuons', postfix)
-            if( names[obj] == 'Taus'      or names[obj] == 'All' ):
-                print "removing MC dependencies for taus"
-                _removeMCMatchingForPATObject(process, 'tauMatch', 'patTaus', postfix)
-                ## remove mc extra modules for taus
-                #for mod in ['tauGenJets','tauGenJetsSelectorAllHadrons','tauGenJetMatch']:
-                    #if hasattr(process,mod+postfix):
-                        #getattr(process,'patDefaultSequence'+postfix).remove(getattr(process,mod+postfix))
-                ## remove mc extra configs for taus
-                tauProducer = getattr(process,'patTaus'+postfix)
-                tauProducer.addGenJetMatch   = False
-                tauProducer.embedGenJetMatch = False
-                tauProducer.genJetMatch      = ''
-            if( names[obj] == 'Jets'      or names[obj] == 'All' ):
-                print "removing MC dependencies for jets"
-                ## there may be multiple jet collection, therefore all jet collections
-                ## in patDefaultSequence+postfix are threated here
-                jetPostfixes = []
-                for mod in process.producerNames().split(' '):
-                    if mod.startswith('patJets'):
-                        jetPostfixes.append(getattr(process, mod).label_().replace("patJets",""))
-                for pfix in jetPostfixes:
-                    ## remove mc extra modules for jets
-                    for mod in ['patJetPartonMatch','patJetGenJetMatch','patJetFlavourId','patJetPartons','patJetPartonAssociation','patJetFlavourAssociation']:
-                        if hasattr(process,mod+pfix):
-                            delattr(process,mod+pfix)
-                    ## remove mc extra configs for jets
-                    jetProducer = getattr(process, jetCollectionString()+pfix)
-                    jetProducer.addGenPartonMatch   = False
-                    jetProducer.embedGenPartonMatch = False
-                    jetProducer.genPartonMatch      = ''
-                    jetProducer.addGenJetMatch      = False
-                    jetProducer.genJetMatch         = ''
-                    jetProducer.getJetMCFlavour     = False
-                    jetProducer.JetPartonMapSource  = ''
-                ## adjust output
-                for outMod in outputModules:
-                    if hasattr(process,outMod):
-                        getattr(process,outMod).outputCommands.append("drop *_selectedPatJets*_genJets_*")
-                    else:
-                        raise KeyError, "process has no OutModule named", outMod
-
-            if( names[obj] == 'METs'      or names[obj] == 'All' ):
-                ## remove mc extra configs for jets
-                metProducer = getattr(process, 'patMETs'+postfix)
-                metProducer.addGenMET           = False
-                metProducer.genMETSource        = ''
-
-removeMCMatching=RemoveMCMatching()
-
-def _removeMCMatchingForPATObject(process, matcherName, producerName, postfix=""):
-    ## remove mcMatcher from the default sequence
-    #objectMatcher = getattr(process, matcherName+postfix)
-    #if (producerName=='pfPatMuons'or producerName=='pfPatTaus'):
-        ##no idea what this should do: there is no other occurance of 'PFPATafterPAT' in CMSSW other than here...
-        #getattr(process,"PFPATafterPAT"+postfix).remove(objectMatcher)
-    #if (producerName=='patMuons'or producerName=='patTaus'or
-        #producerName=='patPhotons' or producerName=='patElectrons'):
-        #getattr(process,"patDefaultSequence"+postfix).remove(objectMatcher)
-    ## straighten photonProducer
-    objectProducer = getattr(process, producerName+postfix)
-    objectProducer.addGenMatch      = False
-    objectProducer.embedGenMatch    = False
-    objectProducer.genParticleMatch = ''
+    # Configure Top Projections
+    getattr(process,"pfNoPileUp"+postfix).enable = True
+    getattr(process,"pfNoMuon"+postfix).enable = True
+    getattr(process,"pfNoElectron"+postfix).enable = True
+    getattr(process,"pfNoTau"+postfix).enable = False
+    getattr(process,"pfNoJet"+postfix).enable = True 	
+    exclusionList = ''
+    for object in excludeFromTopProjection:
+	   getattr(process,"pfNo"+object+postfix).enable = False
+	   exclusionList=exclusionList+object+','
+    exclusionList=exclusionList.rstrip(',')	
+    print "Done: PF2PAT interfaced to PAT, postfix=", postfix,", Exluded from Top Projection:",exclusionList
+    

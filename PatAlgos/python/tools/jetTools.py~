@@ -1,8 +1,23 @@
 from FWCore.GuiBrowsers.ConfigToolBase import *
-
+from FWCore.ParameterSet.Mixins import PrintOptions,_ParameterTypeBase,_SimpleParameterTypeBase, _Parameterizable, _ConfigureComponent, _TypedParameterizable, _Labelable,  _Unlabelable,  _ValidatingListBase
+from FWCore.ParameterSet.SequenceTypes import _ModuleSequenceType, _Sequenceable
+from FWCore.ParameterSet.SequenceTypes import *
 from PhysicsTools.PatAlgos.tools.helpers import *
 ## import a list of all supported btag infos
 from PhysicsTools.PatAlgos.recoLayer0.bTagging_cff import *
+import sys
+def addESProducers(process,config):
+	config = config.replace("/",".")
+	#import RecoBTag.Configuration.RecoBTag_cff as btag
+	#print btag
+	module = __import__(config)
+	for name in dir(sys.modules[config]):
+		item = getattr(sys.modules[config],name)
+		if isinstance(item,_Labelable) and not isinstance(item,_ModuleSequenceType) and not name.startswith('_') and not (name == "source" or name == "looper" or name == "subProcess") and not type(item) is cms.PSet:
+			
+			if 'ESProducer' in item.type_():
+				setattr(process,name,item)	
+
 
 class AddJetCollection(ConfigToolBase):
     """
@@ -221,7 +236,6 @@ class AddJetCollection(ConfigToolBase):
             _newPatJets.trackAssociationSource=''
             _newPatJets.addJetCharge=False
             _newPatJets.jetChargeSource=''
-
         ## run btagging if required by user
         if (bTagging):
             ## expand tagInfos to what is explicitely required by user + implicit
@@ -237,8 +251,12 @@ class AddJetCollection(ConfigToolBase):
                     if not tagInfoCovered :
                         requiredTagInfos.append(requiredTagInfo)
             ## load sequences and setups needed fro btagging
-            process.load("RecoBTag.Configuration.RecoBTag_cff")
+	    ## This loads all available btagger, but the ones we need are added to the process by hand lader. Only needed to get the ESProducer. Needs improvement
+            #loadWithPostFix(process,"RecoBTag.Configuration.RecoBTag_cff",postfix)
+            #process.load("RecoBTag.Configuration.RecoBTag_cff")
+	    addESProducers(process,'RecoBTag.Configuration.RecoBTag_cff')	    
             import RecoBTag.Configuration.RecoBTag_cff as btag
+
             ## prepare setups for simple secondary vertex infos
             setattr(process, "simpleSecondaryVertex2Trk", simpleSecondaryVertex2Trk)
             ## prepare setups for transient tracks
@@ -390,9 +408,9 @@ class AddJetCollection(ConfigToolBase):
 
                 from PhysicsTools.PatAlgos.producersLayer1.metProducer_cfi import patMETs
                 if jetCorrections[2].lower() == 'type-1':
-                    setattr(process, 'patMETs'+_labelName, patMETs.clone(metSource = cms.InputTag(jetCorrections[0]+'Type1CorMet'+postfix), addMuonCorrections = False))
+                    setattr(process, 'patMETs'+_labelName+postfix, patMETs.clone(metSource = cms.InputTag(jetCorrections[0]+'Type1CorMet'+postfix), addMuonCorrections = False))
                 elif jetCorrections[2].lower() == 'type-1':
-                    setattr(process, 'patMETs'+_labelName, patMETs.clone(metSource = cms.InputTag(jetCorrections[0]+'Type1p2CorMet'+postfix), addMuonCorrections = False))
+                    setattr(process, 'patMETs'+_labelName+postfix, patMETs.clone(metSource = cms.InputTag(jetCorrections[0]+'Type1p2CorMet'+postfix), addMuonCorrections = False))
         else:
             ## switch jetCorrFactors off
             _newPatJets.addJetCorrFactors=False
@@ -546,7 +564,7 @@ class AddJetID(ConfigToolBase):
         ## replace jet id sequence
         process.load("RecoJets.JetProducers.ak5JetID_cfi")
         setattr( process, jetIdLabel, process.ak5JetID.clone(src = jetSrc))
-        process.makePatJets.replace( process.patJets, getattr(process,jetIdLabel) + process.patJets )
+
 
 addJetID=AddJetID()
 
